@@ -18,6 +18,8 @@ features:
     details: 不只是阅读公式。你可以直接在浏览器中操作 GridWorlds、策略分布和转移概率，亲手验证你的想法。
   - title: 数学 + 直觉
     details: 严谨的数学推导（如贝尔曼方程）与直观的解释和代码实现相结合，让你知其然，更知其所以然。
+  - title: 完整知识体系
+    details: 涵盖从贝尔曼方程到深度强化学习（DQN, Policy Gradient, Actor-Critic）的完整路径，理论与实践并重。
   - title: VitePress 驱动
     details: 基于 Vue 3 和 Markdown 的高性能静态站点生成器。默认提供极致的加载速度和美观的阅读体验。
 ---

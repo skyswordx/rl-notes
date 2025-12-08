@@ -21,7 +21,15 @@ export default defineConfig({
                 items: [
                     { text: '第零章-宏观架构', link: '/my_rl_notes/强化学习-第零章-宏观架构' },
                     { text: '第一章-基本概念', link: '/my_rl_notes/强化学习-第一章-基本概念' },
-                    { text: '第二章-状态值与贝尔曼方程', link: '/my_rl_notes/强化学习-第二章-状态值与贝尔曼方程' }
+                    { text: '第二章-状态值与贝尔曼方程', link: '/my_rl_notes/强化学习-第二章-状态值与贝尔曼方程' },
+                    { text: '第三章-贝尔曼最优方程', link: '/my_rl_notes/强化学习-第三章-贝尔曼最优方程' },
+                    { text: '第四章-值迭代与策略迭代', link: '/my_rl_notes/强化学习-第四章-值迭代与策略迭代' },
+                    { text: '第五章-蒙特卡洛方法', link: '/my_rl_notes/强化学习-第五章-蒙特卡洛方法' },
+                    { text: '第六章-随机逼近理论', link: '/my_rl_notes/强化学习-第六章-随机逼近理论' },
+                    { text: '第七章-时序差分学习', link: '/my_rl_notes/强化学习-第七章-时序差分学习' },
+                    { text: '第八章-值函数近似', link: '/my_rl_notes/强化学习-第八章-值函数近似' },
+                    { text: '第九章-策略梯度方法', link: '/my_rl_notes/强化学习-第九章-策略梯度方法' },
+                    { text: '第十章-演员-评论家方法', link: '/my_rl_notes/强化学习-第十章-演员-评论家方法' }
                 ]
             }
         ],
@@ -33,7 +41,15 @@ export default defineConfig({
                     items: [
                         { text: '第零章-宏观架构', link: '/my_rl_notes/强化学习-第零章-宏观架构' },
                         { text: '第一章-基本概念', link: '/my_rl_notes/强化学习-第一章-基本概念' },
-                        { text: '第二章-状态值与贝尔曼方程', link: '/my_rl_notes/强化学习-第二章-状态值与贝尔曼方程' }
+                        { text: '第二章-状态值与贝尔曼方程', link: '/my_rl_notes/强化学习-第二章-状态值与贝尔曼方程' },
+                        { text: '第三章-贝尔曼最优方程', link: '/my_rl_notes/强化学习-第三章-贝尔曼最优方程' },
+                        { text: '第四章-值迭代与策略迭代', link: '/my_rl_notes/强化学习-第四章-值迭代与策略迭代' },
+                        { text: '第五章-蒙特卡洛方法', link: '/my_rl_notes/强化学习-第五章-蒙特卡洛方法' },
+                        { text: '第六章-随机逼近理论', link: '/my_rl_notes/强化学习-第六章-随机逼近理论' },
+                        { text: '第七章-时序差分学习', link: '/my_rl_notes/强化学习-第七章-时序差分学习' },
+                        { text: '第八章-值函数近似', link: '/my_rl_notes/强化学习-第八章-值函数近似' },
+                        { text: '第九章-策略梯度方法', link: '/my_rl_notes/强化学习-第九章-策略梯度方法' },
+                        { text: '第十章-演员-评论家方法', link: '/my_rl_notes/强化学习-第十章-演员-评论家方法' }
                     ]
                 }
             ]
