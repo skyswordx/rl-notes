@@ -1,0 +1,24 @@
+reference
+
+# 1. 依赖包 (绝对不能上传，体积巨大且可以在云端重新安装)
+node_modules/
+
+# 2. VitePress 构建产物 (这是生成的网页，每次改动都会变，不需要源码仓库管理)
+.vitepress/dist/
+dist/
+
+# 3. 缓存文件 (加快本地启动速度的临时文件)
+.vitepress/cache/
+
+# 4. 系统生成的文件 (垃圾文件)
+.DS_Store
+Thumbs.db
+
+# 5. IDE 配置文件 (如果不想把编辑器配置上传)
+.idea/
+.vscode/
+
+# 6. 错误日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
