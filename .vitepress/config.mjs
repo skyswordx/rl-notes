@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-    base: '/rl-notes/',
+    base: '/rl-notes/', // github 仓库名称
     srcExclude: ['reference/**'],
     markdown: {
         math: true
