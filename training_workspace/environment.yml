@@ -1,0 +1,16 @@
+name: rl_sim2web
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - stable-baselines3[extra]
+    - shimmy>=0.2.1
+    - gymnasium
+    - panda-gym
+    - onnx
+    - onnxruntime
+    - torch
+    - tensorboard

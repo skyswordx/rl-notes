@@ -22,3 +22,8 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# 7. Sim2Web Training Artifacts
+training_workspace/models/
+logs/
+training_workspace/__pycache__/

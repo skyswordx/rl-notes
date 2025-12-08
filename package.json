@@ -13,6 +13,10 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@tresjs/cientos": "^4.3.1",
+    "@tresjs/core": "^4.3.6",
+    "onnxruntime-web": "^1.23.2",
+    "three": "^0.170.0",
     "vitepress": "^1.6.4",
     "vue": "^3.5.25"
   }
