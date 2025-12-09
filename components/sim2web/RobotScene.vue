@@ -245,7 +245,7 @@ onLoop(async ({ delta, elapsed }) => {
                     targetVec.subVectors(targetWorld, jointWorldPos)
                     
                     // 投影到旋转平面（去掉轴向分量）
-                    // 这一步是为了计算“绕着轴需要转多少度”
+                    // 这一步是为了计算"绕着轴需要转多少度"
                     // 投影公式: v_proj = v - (v . axis) * axis
                     const effectorProj = effectorVec.clone().sub(axis.clone().multiplyScalar(effectorVec.dot(axis))).normalize()
                     const targetProj = targetVec.clone().sub(axis.clone().multiplyScalar(targetVec.dot(axis))).normalize()
@@ -337,93 +337,126 @@ const onTargetDrag = (event) => {
 
 <template>
   <div class="sim2web-container">
-    <!-- Left Panel: Stats -->
-    <div class="panel stats-panel">
-      <h4>📊 状态监控</h4>
-      <div class="stat-row">
-        <span class="stat-label">🎯 距离</span>
-        <span class="stat-value" :style="{ color: targetColor }">{{ stats.distance.toFixed(3) }} m</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">⚡ 速度</span>
-        <span class="stat-value">{{ stats.velocity.toFixed(3) }} rad/s</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">🎮 动作</span>
-        <span class="stat-value mono">[{{ stats.action.map(a => a.toFixed(2)).join(', ') }}]</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">💎 Value</span>
-        <span class="stat-value">{{ stats.value.toFixed(3) }}</span>
-      </div>
-      <hr />
-      <div class="stat-row">
-        <span class="stat-label">🖥 FPS</span>
-        <span class="stat-value">{{ stats.fps }}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">⏱ 推理</span>
-        <span class="stat-value">{{ stats.inferenceTime.toFixed(1) }} ms</span>
-      </div>
-      
-      <!-- Debug Toggle -->
-      <hr />
-      <button class="btn btn-small" @click="showDebug = !showDebug">
-        {{ showDebug ? '🔽 隐藏调试' : '🔼 显示调试' }}
-      </button>
-      
-      <!-- Debug Panel -->
-      <div v-if="showDebug" class="debug-section">
-        <div class="debug-row">
-          <span class="debug-label">Session:</span>
-          <span :class="['debug-value', debugInfo.sessionReady ? 'ok' : 'err']">
-            {{ debugInfo.sessionReady ? '✅ Ready' : '❌ Not Ready' }}
-          </span>
+    <!-- Left Panel: RL State Monitor -->
+    <div class="panel left-panel">
+      <div class="panel-section">
+        <h4 class="section-title">RL 状态监控</h4>
+        
+        <!-- Core RL Metrics -->
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">目标距离</span>
+            <span class="metric-value" :style="{ color: targetColor }">{{ stats.distance.toFixed(3) }} m</span>
+          </div>
+          <div class="metric-hint">末端执行器到目标点的欧氏距离，是奖励函数的核心依据</div>
         </div>
-        <div class="debug-row">
-          <span class="debug-label">Error:</span>
-          <span class="debug-value err">{{ debugInfo.lastError || 'None' }}</span>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">末端速度</span>
+            <span class="metric-value">{{ stats.velocity.toFixed(3) }} m/s</span>
+          </div>
+          <div class="metric-hint">末端执行器的移动速度，影响动作平滑度</div>
         </div>
-        <div class="debug-row">
-          <span class="debug-label">Obs Shape:</span>
-          <span class="debug-value">{{ debugInfo.obsShape }}</span>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">价值估计 V(s)</span>
+            <span class="metric-value highlight">{{ stats.value.toFixed(3) }}</span>
+          </div>
+          <div class="metric-hint">Critic 网络对当前状态的评分，越高表示距目标越近</div>
         </div>
-        <div class="debug-row">
-          <span class="debug-label">Action Shape:</span>
-          <span class="debug-value">{{ debugInfo.actionShape }}</span>
-        </div>
-        <div class="debug-row">
-          <span class="debug-label">Joints Found:</span>
-          <span class="debug-value">{{ debugInfo.jointNames.length }}</span>
-        </div>
-        <div class="debug-row">
-          <span class="debug-label">Obs:</span>
-          <span class="debug-value mono small">{{ debugInfo.obsValues.join(', ') }}</span>
-        </div>
-        <div class="debug-row">
-          <span class="debug-label">Action:</span>
-          <span class="debug-value mono small">{{ debugInfo.actionValues.join(', ') }}</span>
+        
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">策略输出 π(s)</span>
+          </div>
+          <div class="metric-array">[{{ stats.action.map(a => a.toFixed(2)).join(', ') }}]</div>
+          <div class="metric-hint">Actor 网络输出的关节角速度指令 (rad/s)</div>
         </div>
       </div>
-    </div>
 
-    <!-- Target Control Panel (for X/Y/Z sliders) -->
-    <div class="panel target-panel" v-if="showDebug">
-      <h4>🎯 目标位置</h4>
-      <div class="slider-row">
-        <label>X: {{ targetPos.x.toFixed(2) }}</label>
-        <input type="range" min="-0.5" max="0.5" step="0.01" :value="targetPos.x" 
-          @input="targetPos.x = parseFloat($event.target.value)" />
+      <div class="panel-divider"></div>
+
+      <!-- Performance Metrics -->
+      <div class="panel-section">
+        <h4 class="section-title">性能指标</h4>
+        <div class="metric-row">
+          <span class="metric-label-sm">渲染帧率</span>
+          <span class="metric-value-sm">{{ stats.fps }} FPS</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label-sm">推理耗时</span>
+          <span class="metric-value-sm">{{ stats.inferenceTime.toFixed(1) }} ms</span>
+        </div>
       </div>
-      <div class="slider-row">
-        <label>Y: {{ targetPos.y.toFixed(2) }}</label>
-        <input type="range" min="0" max="0.8" step="0.01" :value="targetPos.y" 
-          @input="targetPos.y = parseFloat($event.target.value)" />
-      </div>
-      <div class="slider-row">
-        <label>Z: {{ targetPos.z.toFixed(2) }}</label>
-        <input type="range" min="-0.5" max="0.5" step="0.01" :value="targetPos.z" 
-          @input="targetPos.z = parseFloat($event.target.value)" />
+
+      <div class="panel-divider"></div>
+
+      <!-- Debug Panel (Collapsible) -->
+      <div class="panel-section">
+        <button class="toggle-btn" @click="showDebug = !showDebug">
+          {{ showDebug ? '收起调试面板 ▲' : '展开调试面板 ▼' }}
+        </button>
+        
+        <div v-if="showDebug" class="debug-panel">
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">ONNX 会话</span>
+              <span :class="['debug-status', debugInfo.sessionReady ? 'status-ok' : 'status-err']">
+                {{ debugInfo.sessionReady ? '就绪' : '未就绪' }}
+              </span>
+            </div>
+            <div class="debug-hint">ONNX Runtime Web 推理引擎状态</div>
+          </div>
+          
+          <div class="debug-card" v-if="debugInfo.lastError">
+            <div class="debug-header">
+              <span class="debug-label">错误信息</span>
+            </div>
+            <div class="debug-error">{{ debugInfo.lastError }}</div>
+          </div>
+          
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">观测向量维度</span>
+              <span class="debug-value">{{ debugInfo.obsShape }}</span>
+            </div>
+            <div class="debug-hint">arm_pos(3) + arm_vel(3) + achieved(3) + desired(3) = 12</div>
+          </div>
+          
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">动作向量维度</span>
+              <span class="debug-value">{{ debugInfo.actionShape }}</span>
+            </div>
+            <div class="debug-hint">Panda 机械臂 7 个旋转关节的角速度</div>
+          </div>
+          
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">识别关节数</span>
+              <span class="debug-value">{{ debugInfo.jointNames.length }}</span>
+            </div>
+            <div class="debug-hint">从 GLB 模型中解析的可控关节</div>
+          </div>
+          
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">完整观测 s</span>
+            </div>
+            <div class="debug-array">{{ debugInfo.obsValues.join(', ') }}</div>
+            <div class="debug-hint">当前时刻的完整状态向量</div>
+          </div>
+          
+          <div class="debug-card">
+            <div class="debug-header">
+              <span class="debug-label">完整动作 a</span>
+            </div>
+            <div class="debug-array">{{ debugInfo.actionValues.join(', ') }}</div>
+            <div class="debug-hint">策略网络输出的完整动作向量</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -473,41 +506,81 @@ const onTargetDrag = (event) => {
         </TresMesh>
       </TresCanvas>
       
-      <!-- Drag Hint -->
-      <div class="drag-hint">
-        💡 拖拽红色目标球，观察机械臂追踪
+      <!-- Scene Legend -->
+      <div class="scene-legend">
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #ef4444;"></span>
+          <span>目标位置 (可拖拽)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #60a5fa;"></span>
+          <span>末端执行器</span>
+        </div>
       </div>
     </div>
 
     <!-- Right Panel: Controls -->
-    <div class="panel control-panel">
-      <h4>🎛 控制</h4>
-      
-      <button class="btn btn-primary" @click="togglePlay">
-        {{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}
-      </button>
-      <button class="btn btn-secondary" @click="resetScene">
-        🔄 重置
-      </button>
-      <button class="btn btn-secondary" @click="randomTarget">
-        🎲 随机目标
-      </button>
-      
-      <hr />
-      <h4>🤖 LLM 接口</h4>
-      
-      <button class="btn btn-llm" @click="handleExplain">
-        💬 问：为什么？
-      </button>
-      <button class="btn btn-llm" @click="handleRewardDesign">
-        🛠 设计奖励
-      </button>
+    <div class="panel right-panel">
+      <!-- Playback Controls -->
+      <div class="panel-section">
+        <h4 class="section-title">控制</h4>
+        
+        <button class="btn btn-primary" @click="togglePlay">
+          {{ isPlaying ? '暂停' : '播放' }}
+        </button>
+        <button class="btn btn-secondary" @click="resetScene">
+          重置
+        </button>
+        <button class="btn btn-secondary" @click="randomTarget">
+          随机目标
+        </button>
+      </div>
+
+      <div class="panel-divider"></div>
+
+      <!-- Target Position Control -->
+      <div class="panel-section">
+        <h4 class="section-title">目标位置</h4>
+        <div class="slider-group">
+          <div class="slider-row">
+            <label>X: {{ targetPos.x.toFixed(2) }}</label>
+            <input type="range" min="-0.5" max="0.5" step="0.01" :value="targetPos.x" 
+              @input="targetPos.x = parseFloat($event.target.value)" />
+          </div>
+          <div class="slider-row">
+            <label>Y: {{ targetPos.y.toFixed(2) }}</label>
+            <input type="range" min="0" max="0.8" step="0.01" :value="targetPos.y" 
+              @input="targetPos.y = parseFloat($event.target.value)" />
+          </div>
+          <div class="slider-row">
+            <label>Z: {{ targetPos.z.toFixed(2) }}</label>
+            <input type="range" min="-0.5" max="0.5" step="0.01" :value="targetPos.z" 
+              @input="targetPos.z = parseFloat($event.target.value)" />
+          </div>
+        </div>
+        <div class="control-hint">调整目标点在 3D 空间中的坐标</div>
+      </div>
+
+      <div class="panel-divider"></div>
+
+      <!-- LLM Interface -->
+      <div class="panel-section">
+        <h4 class="section-title">LLM 接口</h4>
+        
+        <button class="btn btn-llm" @click="handleExplain">
+          问：为什么？
+        </button>
+        <button class="btn btn-llm" @click="handleRewardDesign">
+          设计奖励
+        </button>
+        <div class="control-hint">使用 LLM 解释策略行为或设计奖励函数</div>
+      </div>
     </div>
 
     <!-- LLM Explain Modal -->
     <div class="modal-overlay" v-if="showExplainModal" @click.self="showExplainModal = false">
       <div class="modal">
-        <h3>💬 策略解释 (XAI)</h3>
+        <h3>策略解释 (XAI)</h3>
         <div class="modal-input">
           <label>你的问题：</label>
           <input v-model="userQuestion" type="text" />
@@ -525,7 +598,7 @@ const onTargetDrag = (event) => {
     <!-- LLM Reward Modal -->
     <div class="modal-overlay" v-if="showRewardModal" @click.self="showRewardModal = false">
       <div class="modal modal-wide">
-        <h3>🛠 奖励函数设计</h3>
+        <h3>奖励函数设计</h3>
         <div class="modal-input">
           <label>你的反馈：</label>
           <input v-model="userFeedback" type="text" />
@@ -543,100 +616,277 @@ const onTargetDrag = (event) => {
 </template>
 
 <style scoped>
+/* ===== Base Container ===== */
 .sim2web-container {
   display: flex;
   width: 100%;
-  height: calc(100vh - 100px); /* Full viewport minus header */
+  max-width: 1600px;
+  height: 80vh;
   min-height: 600px;
+  margin: 0 auto;
   background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
   border-radius: 12px;
   overflow: hidden;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--vp-font-family-base, 'Inter', system-ui, sans-serif);
   color: #e0e0e0;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
+/* ===== Panels ===== */
 .panel {
-  width: 200px;
-  padding: 16px;
+  width: 280px;
+  padding: 20px;
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
-.panel h4 {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #a0a0a0;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.panel hr {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 8px 0;
-}
-
-.stats-panel {
+.left-panel {
   border-right: none;
   border-radius: 12px 0 0 12px;
 }
 
-.control-panel {
+.right-panel {
   border-left: none;
   border-radius: 0 12px 12px 0;
+  width: 240px;
 }
 
-.stat-row {
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  margin: 12px 0;
+}
+
+/* ===== Metric Cards ===== */
+.metric-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.metric-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 4px;
+}
+
+.metric-label {
   font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e0;
 }
 
-.stat-label {
-  color: #888;
-}
-
-.stat-value {
+.metric-value {
+  font-size: 15px;
   font-weight: 600;
   color: #fff;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
 }
 
-.stat-value.mono {
-  font-family: 'JetBrains Mono', monospace;
+.metric-value.highlight {
+  color: #68d391;
+}
+
+.metric-array {
+  font-size: 12px;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+  color: #90cdf4;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin: 4px 0;
+  word-break: break-all;
+}
+
+.metric-hint {
   font-size: 11px;
+  color: #718096;
+  line-height: 1.4;
+  margin-top: 4px;
 }
 
+/* ===== Performance Metrics ===== */
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.metric-label-sm {
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.metric-value-sm {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e2e8f0;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+}
+
+/* ===== Debug Panel ===== */
+.toggle-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+.debug-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.debug-card {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 10px;
+  border-left: 3px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.debug-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.debug-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #90cdf4;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+}
+
+.debug-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.status-ok {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+}
+
+.status-err {
+  background: rgba(245, 101, 101, 0.2);
+  color: #fc8181;
+}
+
+.debug-error {
+  font-size: 11px;
+  color: #fc8181;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+  word-break: break-all;
+}
+
+.debug-array {
+  font-size: 11px;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+  color: #b794f4;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin: 4px 0;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.debug-hint {
+  font-size: 10px;
+  color: #718096;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* ===== Scene Wrapper ===== */
 .scene-wrapper {
   flex: 1;
   position: relative;
 }
 
-.drag-hint {
+.scene-legend {
   position: absolute;
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
   background: rgba(0, 0, 0, 0.6);
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 20px;
-  font-size: 13px;
-  color: #a0a0a0;
   pointer-events: none;
 }
 
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ===== Buttons ===== */
 .btn {
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .btn-primary {
@@ -668,7 +918,57 @@ const onTargetDrag = (event) => {
   box-shadow: 0 4px 12px rgba(56, 239, 125, 0.3);
 }
 
-/* Modal */
+/* ===== Sliders ===== */
+.slider-group {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.slider-row {
+  margin-bottom: 10px;
+}
+
+.slider-row:last-child {
+  margin-bottom: 0;
+}
+
+.slider-row label {
+  display: block;
+  font-size: 12px;
+  color: #a0aec0;
+  margin-bottom: 6px;
+  font-family: var(--vp-font-family-mono, 'JetBrains Mono', monospace);
+}
+
+.slider-row input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #667eea;
+  cursor: pointer;
+  border: 2px solid #fff;
+}
+
+.control-hint {
+  font-size: 11px;
+  color: #718096;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+/* ===== Modal ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -699,6 +999,8 @@ const onTargetDrag = (event) => {
 .modal h3 {
   margin: 0 0 16px 0;
   color: #fff;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .modal-input {
@@ -708,7 +1010,7 @@ const onTargetDrag = (event) => {
 .modal-input label {
   display: block;
   margin-bottom: 6px;
-  color: #a0a0a0;
+  color: #a0aec0;
   font-size: 13px;
 }
 
@@ -736,7 +1038,8 @@ const onTargetDrag = (event) => {
   white-space: pre-wrap;
   font-size: 13px;
   line-height: 1.6;
-  color: #e0e0e0;
+  color: #e2e8f0;
+  font-family: var(--vp-font-family-base, system-ui, sans-serif);
 }
 
 .modal-actions {
@@ -745,101 +1048,8 @@ const onTargetDrag = (event) => {
   justify-content: flex-end;
 }
 
-/* Debug Panel */
-.btn-small {
-  padding: 6px 10px;
-  font-size: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 6px;
-  color: #a0a0a0;
-  cursor: pointer;
-  width: 100%;
-}
-
-.btn-small:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.debug-section {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.1);
-}
-
-.debug-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 4px;
-}
-
-.debug-label {
-  color: #666;
-}
-
-.debug-value {
-  color: #888;
-  max-width: 100px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.debug-value.ok {
-  color: #22c55e;
-}
-
-.debug-value.err {
-  color: #ef4444;
-}
-
-.debug-value.mono {
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.debug-value.small {
-  font-size: 9px;
-}
-
-/* Target Panel */
-.target-panel {
-  position: absolute;
-  top: 10px;
-  left: 220px;
-  width: 180px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(10px);
-  border-radius: 8px;
-  z-index: 200;
-}
-
-.slider-row {
-  margin-bottom: 8px;
-}
-
-.slider-row label {
-  display: block;
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 4px;
-}
-
-.slider-row input[type="range"] {
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.slider-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #667eea;
-  cursor: pointer;
+.modal-actions .btn {
+  width: auto;
+  padding: 8px 16px;
 }
 </style>

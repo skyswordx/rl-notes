@@ -1,42 +1,99 @@
 ---
-layout: page
+layout: doc
 title: Sim2Web 机械臂操控
+aside: false 
+sidebar: false
+editLink: false
 ---
 
 <script setup>
 import RobotScene from '../components/sim2web/RobotScene.vue'
 </script>
 
-<style scoped>
-.vp-doc {
-  max-width: 100% !important;
-  padding: 0 !important;
-}
-</style>
-
 # Sim2Web: 机械臂操控实战
 
-本项目展示了从 **深度强化学习 (Deep RL)** 模型训练到基于 **ONNX** 和 **Three.js** 的 Web 端实时推理的全流程。
+<div class="project-badges">
+  <img src="https://img.shields.io/badge/Model-Panda-blue" />
+  <img src="https://img.shields.io/badge/Stack-ONNX%20%2B%20Three.js-green" />
+  <img src="https://img.shields.io/badge/Physics-Simulated-orange" />
+</div>
 
-## 交互演示
+本项目展示了从 **深度强化学习 (Deep RL)** 模型训练到基于 **ONNX Runtime Web** 的端侧推理全流程。在下方演示中，你可以拖动目标球体，观察机械臂如何根据神经网络策略实时规划路径。
 
-<div style="width: 100%; min-height: 700px;">
+---
+
+<div class="theater-stage">
   <ClientOnly>
     <RobotScene />
   </ClientOnly>
 </div>
 
-> **注意**: 此演示需要加载 `/public/models/` 目录下的 `panda_arm.glb` 模型文件以及训练好的 `robot_policy.onnx` 策略模型。如果您是在本地查看且尚未运行训练脚本，场景可能无法加载或保持静止。
+---
 
-## 工作原理
+## 技术架构详解
 
-1.  **训练 (Training)**: 使用 Python 中的 Stable-Baselines3 库训练智能体 (Agent)。
-2.  **导出 (Export)**: 将训练好的策略网络导出为通用的 ONNX 格式。
-3.  **部署 (Deployment)**: 在浏览器中加载 ONNX 模型，实时接收环境观测状态 (Observation) 并输出关节动作 (Action)。
+### 核心工作流
+1.  **训练 (Training)**: 使用 `Stable-Baselines3` (PPO) 在 Gym 环境中训练。
+2.  **导出 (Export)**: 策略网络导出为 `.onnx` 格式 (Float32)。
+3.  **推理 (Inference)**: 浏览器通过 WASM 加载模型，每帧推理耗时 **< 1ms**。
 
-```python
-# 推理逻辑伪代码
-obs = get_robot_state()       # 获取当前机械臂状态
-action = session.run(obs)     # 运行 ONNX 模型进行推理
-robot.apply_action(action)    # 将动作应用到机械臂关节
+### 观测空间 (Observation Space)
+模型接收 12 维向量作为输入：
+
+$$s_t = [p_{ee}, v_{ee}, p_{achieved}, p_{desired}]$$
+
+其中 $p_{ee}$ 为末端执行器位置 (x,y,z)。
+
+::: details 点击查看推理代码片段
+```javascript
+// 获取当前状态
+const obs = [...armPos, ...armVel, ...achieved, ...desired];
+// ONNX 推理
+const action = await controller.value.predict(obs);
+// 应用动作
+applyTorque(action);
 ```
+:::
+
+<style>
+/* 隐藏当前页面的右侧 TOC（如果有遗漏）并调整最大宽度 */
+.VPDoc .container {
+  max-width: 100% !important;
+}
+
+.VPDoc .content {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* 剧场模式容器：突破父级限制 */
+.theater-stage {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  padding: 2rem 1rem;
+  background: #0f0f1a;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+}
+
+/* 针对移动端优化 */
+@media (max-width: 768px) {
+  .theater-stage {
+    width: 100%;
+    left: 0;
+    margin-left: 0;
+    padding: 1rem 0;
+  }
+}
+
+.project-badges {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+</style>
