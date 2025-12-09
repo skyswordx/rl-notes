@@ -3,6 +3,7 @@ import panda_gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import CheckpointCallback
+from gymnasium.wrappers import FlattenObservation
 import os
 
 def train():
@@ -17,7 +18,8 @@ def train():
     env_id = "PandaReach-v3"
     
     # Vectorized environment for faster training
-    env = make_vec_env(env_id, n_envs=4)
+    # Use FlattenObservation to convert Dict obs to Flat obs for MlpPolicy
+    env = make_vec_env(env_id, n_envs=4, wrapper_class=FlattenObservation)
 
     # 2. Define the model
     # MlpPolicy is sufficient for state-based observations
@@ -49,6 +51,7 @@ def train():
 
     # 5. Evaluate (Quick check)
     env_eval = gym.make(env_id)
+    env_eval = FlattenObservation(env_eval)
     obs, _ = env_eval.reset()
     print("Running evaluation loop...")
     for _ in range(100):

@@ -15,7 +15,8 @@ class OnnxablePolicy(nn.Module):
     def forward(self, observation):
         # NOTE: You may need to preprocess the observation if using a CNN
         # Wrapper to forward pass through the policy
-        features = self.extractor(observation)
+        # mlp_extractor returns (latent_pi, latent_vf)
+        features, _ = self.extractor(observation)
         action = self.action_net(features)
         return action
 

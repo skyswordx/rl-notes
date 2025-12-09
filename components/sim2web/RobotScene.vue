@@ -1,8 +1,9 @@
 <script setup>
 import { shallowRef, onMounted, ref } from 'vue'
 import { TresCanvas, useRenderLoop } from '@tresjs/core'
-import { OrbitControls, useGLTF } from '@tresjs/cientos'
+import { OrbitControls } from '@tresjs/cientos'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { RobotController } from './Controller.js'
 
 // --- State ---
@@ -16,31 +17,34 @@ const debugMsg = ref("Initializing...")
 const MODEL_PATH = '/models/panda_arm.glb'
 const POLICY_PATH = '/models/robot_policy.onnx'
 
-// --- Load Robot ---
-// Note: We use useGLTF inside Suspense in the template, but since we are handling this manually for now
-// we might do a direct loader or use the Cientos component.
-// Let's use the standard async loader pattern compatible with Script Setup
-const { scene: robotScene } = await useGLTF(MODEL_PATH).catch(err => {
-    console.error("Failed to load robot GLB", err)
-    debugMsg.value = "Error loading GLB"
-    return { scene: null }
-})
-
-if (robotScene) {
-    robotModel.value = robotScene
-    // Enable shadows
-    robotModel.value.traverse((child) => {
-        if (child.isMesh) {
-            child.castShadow = true
-            child.receiveShadow = true
-        }
-    })
-    isModelLoaded.value = true
-    debugMsg.value = "Robot loaded."
+// --- Load Robot (Manual Loader) ---
+const loadRobot = async () => {
+    try {
+        const loader = new GLTFLoader()
+        const gltf = await loader.loadAsync(MODEL_PATH)
+        robotModel.value = gltf.scene
+        
+        // Enable shadows
+        robotModel.value.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true
+                child.receiveShadow = true
+            }
+        })
+        isModelLoaded.value = true
+        debugMsg.value = "Robot loaded."
+    } catch (err) {
+        console.error("Failed to load robot GLB", err)
+        debugMsg.value = "Error: panda_arm.glb missing!"
+    }
 }
 
 // --- Initialize Controller ---
 onMounted(async () => {
+    // Load Model
+    await loadRobot()
+
+    // Load Controller
     controller.value = new RobotController(POLICY_PATH)
     await controller.value.init()
     if (!controller.value.error) {
@@ -94,9 +98,13 @@ onLoop(async ({ delta, elapsed }) => {
       <TresAmbientLight :intensity="0.5" />
       <TresDirectionalLight :position="[1, 2, 3]" :intensity="1" cast-shadow />
       
-      <Suspense>
-        <primitive :object="robotModel" v-if="robotModel" :position="[0, -0.5, 0]" />
-      </Suspense>
+      <primitive :object="robotModel" v-if="robotModel" :position="[0, -0.5, 0]" />
+      
+      <!-- Fallback Box if Missing -->
+      <TresMesh v-if="!robotModel && debugMsg.includes('missing')" :position="[0, 0.5, 0]">
+          <TresBoxGeometry :args="[0.5, 0.5, 0.5]" />
+          <TresMeshStandardMaterial color="gray" />
+      </TresMesh>
       
       <TresMesh :position="targetPos">
         <TresSphereGeometry :args="[0.05, 32, 32]" />
