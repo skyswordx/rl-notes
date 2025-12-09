@@ -1,36 +1,25 @@
 ---
 layout: doc
 title: Sim2Web 机械臂操控
-aside: false 
+aside: false
 sidebar: false
 editLink: false
+pageClass: immersive-page
 ---
 
 <script setup>
 import RobotScene from '../components/sim2web/RobotScene.vue'
 </script>
 
-# Sim2Web: 机械臂操控实战
+<ClientOnly>
+  <RobotScene />
+</ClientOnly>
 
-<div class="project-badges">
-  <img src="https://img.shields.io/badge/Model-Panda-blue" />
-  <img src="https://img.shields.io/badge/Stack-ONNX%20%2B%20Three.js-green" />
-  <img src="https://img.shields.io/badge/Physics-Simulated-orange" />
-</div>
-
-本项目展示了从 **深度强化学习 (Deep RL)** 模型训练到基于 **ONNX Runtime Web** 的端侧推理全流程。在下方演示中，你可以拖动目标球体，观察机械臂如何根据神经网络策略实时规划路径。
-
----
-
-<div class="theater-stage">
-  <ClientOnly>
-    <RobotScene />
-  </ClientOnly>
-</div>
-
----
+<div class="doc-content-wrapper">
 
 ## 技术架构详解
+
+本项目展示了从 **深度强化学习 (Deep RL)** 模型训练到基于 **ONNX Runtime Web** 的端侧推理全流程。
 
 ### 核心工作流
 1.  **训练 (Training)**: 使用 `Stable-Baselines3` (PPO) 在 Gym 环境中训练。
@@ -55,45 +44,4 @@ applyTorque(action);
 ```
 :::
 
-<style>
-/* 隐藏当前页面的右侧 TOC（如果有遗漏）并调整最大宽度 */
-.VPDoc .container {
-  max-width: 100% !important;
-}
-
-.VPDoc .content {
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-/* 剧场模式容器：突破父级限制 */
-.theater-stage {
-  width: 100vw;
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-  padding: 2rem 1rem;
-  background: #0f0f1a;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-}
-
-/* 针对移动端优化 */
-@media (max-width: 768px) {
-  .theater-stage {
-    width: 100%;
-    left: 0;
-    margin-left: 0;
-    padding: 1rem 0;
-  }
-}
-
-.project-badges {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-</style>
+</div>

@@ -1,1 +1,51 @@
 /* Custom styles for RoboLearning */
+
+/* ========== Immersive Page Layout Overrides ========== */
+.immersive-page .VPNavBar {
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    border-bottom: none !important;
+}
+
+.immersive-page .VPNav {
+    background-color: transparent !important;
+}
+
+.immersive-page .VPDoc {
+    padding: 0 !important;
+}
+
+.immersive-page .VPDoc .container {
+    margin: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+.immersive-page .VPContent {
+    padding: 0 !important;
+}
+
+.immersive-page .content-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+.immersive-page .vp-doc {
+    padding: 0 !important;
+}
+
+/* Documentation Content Wrapper - Restores reading width below fold */
+.doc-content-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+    background: var(--vp-c-bg);
+    position: relative;
+    z-index: 20;
+}
+
+.doc-content-wrapper h2,
+.doc-content-wrapper h3 {
+    border-top: none;
+    padding-top: 1rem;
+}
