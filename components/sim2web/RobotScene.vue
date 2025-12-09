@@ -194,100 +194,87 @@ onLoop(async ({ delta, elapsed }) => {
         
         // 4. Animate Panda arm using CCD (Cyclic Coordinate Descent) IK
         if (robotModel.value) {
-            // Get all joints in the kinematic chain (from base to end effector)
-            const jointNames = ['panda_link1', 'panda_link2', 'panda_link3', 'panda_link4', 'panda_link5', 'panda_link6', 'panda_link7', 'panda_hand']
+            const jointNames = ['panda_link1', 'panda_link2', 'panda_link3', 'panda_link4', 'panda_link5', 'panda_link6', 'panda_link7']
+            // 注意：移除 panda_hand，因为它通常是固定的末端，不参与旋转求解，或者视具体模型结构而定。
+            // 如果你的模型 panda_hand 是最后一个可旋转关节，则保留。但在 Franka 中 link7 是最后一个旋转关节。
+            
             const joints = jointNames.map(name => robotModel.value.getObjectByName(name)).filter(j => j)
             
-            debugInfo.value.jointNames = joints.map(j => j.name)
-            
+            // 如果找不到关节，直接返回
             if (joints.length === 0) return
+
+            // 获取末端执行器（通常是最后一个 Link 的子级或者就是最后一个 Link）
+            // 为了更精确，建议获取 panda_hand 作为末端追踪点
+            const endEffector = robotModel.value.getObjectByName('panda_hand') || joints[joints.length - 1]
             
-            // Get the end effector (last joint or hand)
-            const endEffector = joints[joints.length - 1]
-            
-            // Target position in world space
             const targetWorld = endEffectorPos.value.clone()
+            const maxIterations = 5 // 增加迭代次数可以提高精度，但消耗性能
+            const threshold = 0.001 // 提高精度阈值
+            const q = new THREE.Quaternion()
+            const targetVec = new THREE.Vector3()
+            const effectorVec = new THREE.Vector3()
+            const axis = new THREE.Vector3()
             
-            // CCD IK parameters
-            const maxIterations = 10
-            const threshold = 0.01 // Stop when close enough
-            
-            // Panda joint rotation axes (from URDF)
-            // Joint 1,3,5,7: rotate around local Z
-            // Joint 2,4,6: rotate around local Y
-            const jointAxes = [
-                new THREE.Vector3(0, 0, 1), // link1 - Z
-                new THREE.Vector3(0, 1, 0), // link2 - Y
-                new THREE.Vector3(0, 0, 1), // link3 - Z
-                new THREE.Vector3(0, 1, 0), // link4 - Y
-                new THREE.Vector3(0, 0, 1), // link5 - Z
-                new THREE.Vector3(0, 1, 0), // link6 - Y
-                new THREE.Vector3(0, 0, 1), // link7 - Z
-                new THREE.Vector3(0, 0, 1), // hand - Z (optional)
-            ]
-            
-            // CCD Iteration
+            // CCD 核心循环
             for (let iter = 0; iter < maxIterations; iter++) {
-                // Get current end effector world position
-                const eeWorldPos = new THREE.Vector3()
-                endEffector.getWorldPosition(eeWorldPos)
-                
-                // Check if we're close enough
-                const distToTarget = eeWorldPos.distanceTo(targetWorld)
-                if (distToTarget < threshold) break
-                
-                // Iterate through joints from end to base (CCD order)
-                for (let i = joints.length - 2; i >= 0; i--) {
+                // 检查是否已经到达目标
+                const currentEEPos = new THREE.Vector3()
+                endEffector.getWorldPosition(currentEEPos)
+                if (currentEEPos.distanceTo(targetWorld) < threshold) break
+
+                // 从末端往基座反向遍历关节
+                for (let i = joints.length - 1; i >= 0; i--) {
                     const joint = joints[i]
-                    const axis = jointAxes[i] || new THREE.Vector3(0, 0, 1)
                     
-                    // Get joint world position
+                    // 关键修正 1：URDF 导出的关节，旋转轴通常永远是局部的 Z 轴 (0, 0, 1)
+                    // 不需要手动猜测它是 X 还是 Y，yourdfpy 已经处理了父子变换，使得 Z 轴成为旋转轴
+                    const rotateAxisLocal = new THREE.Vector3(0, 0, 1)
+                    
+                    // 关键修正 2：将局部的 Z 轴转换为世界坐标系的轴向量
+                    // 这样无论父级怎么旋转，我们都能得到当前关节在世界空间中真实的旋转轴指向
+                    joint.getWorldQuaternion(q)
+                    axis.copy(rotateAxisLocal).applyQuaternion(q).normalize()
+                    
+                    // 获取关节和末端的世界位置
                     const jointWorldPos = new THREE.Vector3()
                     joint.getWorldPosition(jointWorldPos)
+                    endEffector.getWorldPosition(currentEEPos)
                     
-                    // Get current end effector position
-                    endEffector.getWorldPosition(eeWorldPos)
+                    // 构建向量：关节->末端，关节->目标
+                    effectorVec.subVectors(currentEEPos, jointWorldPos)
+                    targetVec.subVectors(targetWorld, jointWorldPos)
                     
-                    // Vector from joint to end effector (current)
-                    const toEE = new THREE.Vector3().subVectors(eeWorldPos, jointWorldPos)
+                    // 投影到旋转平面（去掉轴向分量）
+                    // 这一步是为了计算“绕着轴需要转多少度”
+                    // 投影公式: v_proj = v - (v . axis) * axis
+                    const effectorProj = effectorVec.clone().sub(axis.clone().multiplyScalar(effectorVec.dot(axis))).normalize()
+                    const targetProj = targetVec.clone().sub(axis.clone().multiplyScalar(targetVec.dot(axis))).normalize()
                     
-                    // Vector from joint to target
-                    const toTarget = new THREE.Vector3().subVectors(targetWorld, jointWorldPos)
+                    // 计算旋转角度
+                    let angle = Math.acos(Math.max(-1, Math.min(1, effectorProj.dot(targetProj))))
                     
-                    // Skip if vectors are too small
-                    if (toEE.length() < 0.001 || toTarget.length() < 0.001) continue
+                    // 判断旋转方向 (叉乘)
+                    // 如果 (effector x target) 的方向与旋转轴方向一致，则为正，否则为负
+                    const cross = new THREE.Vector3().crossVectors(effectorProj, targetProj)
+                    if (cross.dot(axis) < 0) angle = -angle
                     
-                    // Project vectors onto plane perpendicular to rotation axis
-                    // Transform axis to world space
-                    const worldAxis = axis.clone().applyQuaternion(joint.getWorldQuaternion(new THREE.Quaternion()))
+                    // 限制单步旋转幅度，防止鬼畜（Damping）
+                    const maxStep = 0.2 // 弧度
+                    if (Math.abs(angle) > maxStep) {
+                        angle = maxStep * Math.sign(angle)
+                    }
                     
-                    // Project toEE and toTarget onto the rotation plane
-                    const toEEProj = toEE.clone().sub(worldAxis.clone().multiplyScalar(toEE.dot(worldAxis)))
-                    const toTargetProj = toTarget.clone().sub(worldAxis.clone().multiplyScalar(toTarget.dot(worldAxis)))
-                    
-                    if (toEEProj.length() < 0.001 || toTargetProj.length() < 0.001) continue
-                    
-                    // Calculate rotation angle
-                    toEEProj.normalize()
-                    toTargetProj.normalize()
-                    
-                    let angle = Math.acos(Math.max(-1, Math.min(1, toEEProj.dot(toTargetProj))))
-                    
-                    // Determine rotation direction using cross product
-                    const cross = new THREE.Vector3().crossVectors(toEEProj, toTargetProj)
-                    if (cross.dot(worldAxis) < 0) angle = -angle
-                    
-                    // Limit rotation per step for smooth movement
-                    const maxRotation = 0.1 // radians per iteration
-                    angle = Math.max(-maxRotation, Math.min(maxRotation, angle))
-                    
-                    // Apply rotation based on joint axis
-                    if (axis.z === 1) {
+                    // 关键修正 3：只更新 rotation.z
+                    // 因为我们定义了局部旋转轴是 Z，所以只动 Z 分量
+                    if (Math.abs(angle) > 0.0001) {
                         joint.rotation.z += angle
-                    } else if (axis.y === 1) {
-                        joint.rotation.y += angle
-                    } else if (axis.x === 1) {
-                        joint.rotation.x += angle
+                        
+                        // 可选：在这里添加关节角度限制 (Joint Limits)
+                        // 例如 Franka 的某些关节限制是 -2.89 到 2.89
+                        // joint.rotation.z = Math.max(-2.89, Math.min(2.89, joint.rotation.z))
+                        
+                        // 立即更新矩阵，以便下一次循环（或同一个循环的下一个关节）能拿到最新的世界坐标
+                        joint.updateMatrixWorld(true)
                     }
                 }
             }
