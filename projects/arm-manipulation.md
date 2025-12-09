@@ -1,5 +1,5 @@
 ---
-layout: doc
+layout: page
 title: Sim2Web 机械臂操控
 ---
 
@@ -7,22 +7,20 @@ title: Sim2Web 机械臂操控
 import RobotScene from '../components/sim2web/RobotScene.vue'
 </script>
 
+<style scoped>
+.vp-doc {
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+</style>
+
 # Sim2Web: 机械臂操控实战
 
 本项目展示了从 **深度强化学习 (Deep RL)** 模型训练到基于 **ONNX** 和 **Three.js** 的 Web 端实时推理的全流程。
 
-## 项目概览
-
-- **算法**: PPO (Proximal Policy Optimization, 近端策略优化)
-- **环境**: PandaReach-v3 (基于 Panda-Gym)
-- **推理引擎**: ONNX Runtime Web
-- **渲染引擎**: Three.js + TresJS
-
-我们的目标是控制 Franka Panda 机械臂的末端执行器，使其到达红色的目标球体位置。
-
 ## 交互演示
 
-<div style="margin: 20px 0;">
+<div style="width: 100%; min-height: 700px;">
   <ClientOnly>
     <RobotScene />
   </ClientOnly>

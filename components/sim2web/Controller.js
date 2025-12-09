@@ -1,5 +1,15 @@
-
 import * as ort from 'onnxruntime-web';
+import { withBase } from 'vitepress';
+
+// Use CDN for ONNX Runtime WASM files.
+// Vite does not allow dynamic imports from /public, so we use jsDelivr CDN.
+const ORT_VERSION = '1.23.2';
+ort.env.wasm.wasmPaths = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VERSION}/dist/`;
+
+// Disable multi-threading and SIMD for maximum browser compatibility
+ort.env.wasm.numThreads = 1;
+ort.env.wasm.simd = false;
+ort.env.wasm.proxy = false;
 
 export class RobotController {
     constructor(modelPath) {
@@ -16,7 +26,7 @@ export class RobotController {
             // Create an inference session
             // Set execution providers to wasm for browser compatibility
             this.session = await ort.InferenceSession.create(this.modelPath, {
-                executionProviders: ['wasm', 'webgl'],
+                executionProviders: ['wasm'],
             });
             console.log('ONNX Session created');
         } catch (e) {
